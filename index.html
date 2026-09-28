@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
+
+    <title>電子署名</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
+            background: #f5f6f8;
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                "Helvetica Neue",
+                "Yu Gothic",
+                "YuGothic",
+                "Hiragino Kaku Gothic ProN",
+                Meiryo,
+                sans-serif;
+
+            color: #222;
+        }
+
+        body {
+            padding: 24px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            text-align: center;
+            font-size: 30px;
+            font-weight: 700;
+        }
+
+        .description {
+            margin-bottom: 24px;
+            text-align: center;
+            font-size: 18px;
+            color: #555;
+        }
+
+        .signature-card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow:
+                0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .signature-area {
+            position: relative;
+            width: 100%;
+            height: 420px;
+
+            border: 2px solid #555;
+            border-radius: 8px;
+
+            background: #fff;
+
+            overflow: hidden;
+
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+
+            touch-action: none;
+
+            cursor: crosshair;
+        }
+
+        .signature-line {
+            position: absolute;
+            left: 8%;
+            right: 8%;
+            bottom: 70px;
+
+            border-bottom: 1px solid #aaa;
+
+            pointer-events: none;
+        }
+
+        .signature-label {
+            position: absolute;
+            left: 8%;
+            bottom: 35px;
+
+            color: #999;
+            font-size: 14px;
+
+            pointer-events: none;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 16px;
+
+            margin-top: 20px;
+        }
+
+        button {
+            appearance: none;
+            border: none;
+            border-radius: 8px;
+
+            min-height: 64px;
+
+            font-size: 20px;
+            font-weight: 700;
+
+            cursor: pointer;
+
+            transition:
+                opacity 0.15s,
+                transform 0.05s;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .clear-button {
+            flex: 1;
+
+            background: #e5e7eb;
+            color: #222;
+        }
+
+        .submit-button {
+            flex: 2;
+
+            background: #1677ff;
+            color: #fff;
+        }
+
+        .submit-button:disabled {
+            background: #aab7c4;
+            cursor: not-allowed;
+        }
+
+        .message {
+            display: none;
+
+            margin-top: 20px;
+            padding: 18px;
+
+            border-radius: 8px;
+
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .message.success {
+            display: block;
+
+            background: #e8f7ee;
+            color: #137333;
+        }
+
+        .message.error {
+            display: block;
+
+            background: #fdecec;
+            color: #c5221f;
+        }
+
+        .preview-container {
+            display: none;
+
+            margin-top: 30px;
+            padding: 20px;
+
+            background: #fff;
+
+            border-radius: 14px;
+
+            box-shadow:
+                0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .preview-container h2 {
+            margin-top: 0;
+            font-size: 20px;
+        }
+
+        #previewImage {
+            display: block;
+
+            max-width: 100%;
+            max-height: 300px;
+
+            margin: 0 auto;
+
+            border: 1px solid #ddd;
+
+            background: #fff;
+        }
+
+        .record-info {
+            margin-bottom: 18px;
+            padding: 12px 16px;
+
+            background: #eef4ff;
+
+            border-radius: 8px;
+
+            color: #333;
+            font-size: 15px;
+        }
+
+        @media (max-width: 700px) {
+
+            body {
+                padding: 12px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .description {
+                font-size: 16px;
+            }
+
+            .signature-card {
+                padding: 12px;
+            }
+
+            .signature-area {
+                height: 360px;
+            }
+
+            button {
+                min-height: 58px;
+                font-size: 18px;
+            }
+
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>電子署名</h1>
+
+    <div class="description">
+        下の枠内にご署名ください
+    </div>
+
+    <div
+        id="recordInfo"
+        class="record-info"
+        style="display:none;"
+    ></div>
+
+    <div class="signature-card">
+
+        <div class="signature-area">
+
+            <canvas id="signatureCanvas"></canvas>
+
+            <div class="signature-line"></div>
+
+            <div class="signature-label">
+                ご署名
+            </div>
+
+        </div>
+
+        <div class="buttons">
+
+            <button
+                id="clearButton"
+                class="clear-button"
+                type="button"
+            >
+                書き直す
+            </button>
+
+            <button
+                id="submitButton"
+                class="submit-button"
+                type="button"
+                disabled
+            >
+                署名を確定する
+            </button>
+
+        </div>
+
+        <div
+            id="message"
+            class="message"
+        ></div>
+
+    </div>
+
+    <div
+        id="previewContainer"
+        class="preview-container"
+    >
+
+        <h2>
+            生成された署名画像
+        </h2>
+
+        <img
+            id="previewImage"
+            alt="署名画像"
+        >
+
+    </div>
+
+</div>
+
+
+<script>
+
+(() => {
+
+    "use strict";
+
+
+    // =========================================================
+    // DOM
+    // =========================================================
+
+    const canvas =
+        document.getElementById("signatureCanvas");
+
+    const ctx =
+        canvas.getContext("2d");
+
+    const clearButton =
+        document.getElementById("clearButton");
+
+    const submitButton =
+        document.getElementById("submitButton");
+
+    const message =
+        document.getElementById("message");
+
+    const previewContainer =
+        document.getElementById("previewContainer");
+
+    const previewImage =
+        document.getElementById("previewImage");
+
+    const recordInfo =
+        document.getElementById("recordInfo");
+
+
+    // =========================================================
+    // URLパラメータ
+    //
+    // 将来的に
+    //
+    // ?record=123
+    //
+    // のようにkintoneからレコードIDを渡す。
+    // =========================================================
+
+    const params =
+        new URLSearchParams(
+            window.location.search
+        );
+
+    const recordId =
+        params.get("record");
+
+
+    if (recordId) {
+
+        recordInfo.style.display =
+            "block";
+
+        recordInfo.textContent =
+            `対象レコード：${recordId}`;
+
+    }
+
+
+    // =========================================================
+    // 署名状態
+    // =========================================================
+
+    let drawing =
+        false;
+
+    let hasSignature =
+        false;
+
+    let lastX =
+        0;
+
+    let lastY =
+        0;
+
+
+    // =========================================================
+    // Canvasサイズ調整
+    // Retina / iPad対応
+    // =========================================================
+
+    function resizeCanvas() {
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+        const ratio =
+            window.devicePixelRatio || 1;
+
+
+        canvas.width =
+            Math.round(
+                rect.width * ratio
+            );
+
+        canvas.height =
+            Math.round(
+                rect.height * ratio
+            );
+
+
+        ctx.setTransform(
+            ratio,
+            0,
+            0,
+            ratio,
+            0,
+            0
+        );
+
+
+        ctx.lineCap =
+            "round";
+
+        ctx.lineJoin =
+            "round";
+
+        ctx.strokeStyle =
+            "#111";
+
+        ctx.lineWidth =
+            3;
+
+    }
+
+
+    resizeCanvas();
+
+
+    // =========================================================
+    // Pointer座標取得
+    // =========================================================
+
+    function getPosition(event) {
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+
+        return {
+
+            x:
+                event.clientX -
+                rect.left,
+
+            y:
+                event.clientY -
+                rect.top
+
+        };
+
+    }
+
+
+    // =========================================================
+    // 描画開始
+    // =========================================================
+
+    function startDrawing(event) {
+
+        event.preventDefault();
+
+
+        drawing =
+            true;
+
+
+        const position =
+            getPosition(event);
+
+
+        lastX =
+            position.x;
+
+        lastY =
+            position.y;
+
+
+        if (
+            canvas.setPointerCapture &&
+            event.pointerId !== undefined
+        ) {
+
+            canvas.setPointerCapture(
+                event.pointerId
+            );
+
+        }
+
+    }
+
+
+    // =========================================================
+    // 描画
+    // =========================================================
+
+    function draw(event) {
+
+        if (!drawing) {
+            return;
+        }
+
+
+        event.preventDefault();
+
+
+        const position =
+            getPosition(event);
+
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            lastX,
+            lastY
+        );
+
+        ctx.lineTo(
+            position.x,
+            position.y
+        );
+
+        ctx.stroke();
+
+
+        lastX =
+            position.x;
+
+        lastY =
+            position.y;
+
+
+        hasSignature =
+            true;
+
+
+        submitButton.disabled =
+            false;
+
+
+        clearMessage();
+
+    }
+
+
+    // =========================================================
+    // 描画終了
+    // =========================================================
+
+    function stopDrawing(event) {
+
+        if (!drawing) {
+            return;
+        }
+
+
+        event.preventDefault();
+
+
+        drawing =
+            false;
+
+
+        if (
+            canvas.releasePointerCapture &&
+            event.pointerId !== undefined
+        ) {
+
+            try {
+
+                canvas.releasePointerCapture(
+                    event.pointerId
+                );
+
+            }
+            catch (error) {
+
+                // Pointer Captureされていない場合は何もしない
+
+            }
+
+        }
+
+    }
+
+
+    // =========================================================
+    // Canvasクリア
+    // =========================================================
+
+    function clearCanvas() {
+
+        ctx.clearRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+
+        hasSignature =
+            false;
+
+
+        submitButton.disabled =
+            true;
+
+
+        previewImage.removeAttribute(
+            "src"
+        );
+
+
+        previewContainer.style.display =
+            "none";
+
+
+        clearMessage();
+
+    }
+
+
+    // =========================================================
+    // メッセージ
+    // =========================================================
+
+    function showMessage(
+        text,
+        type
+    ) {
+
+        message.textContent =
+            text;
+
+        message.className =
+            `message ${type}`;
+
+    }
+
+
+    function clearMessage() {
+
+        message.textContent =
+            "";
+
+        message.className =
+            "message";
+
+    }
+
+
+    // =========================================================
+    // PNG生成
+    // =========================================================
+
+    function createSignaturePng() {
+
+        /*
+         * 帳票に出したとき背景が透明にならないよう、
+         * 白背景付きPNGとして出力する。
+         */
+
+        const outputCanvas =
+            document.createElement(
+                "canvas"
+            );
+
+        outputCanvas.width =
+            canvas.width;
+
+        outputCanvas.height =
+            canvas.height;
+
+
+        const outputCtx =
+            outputCanvas.getContext(
+                "2d"
+            );
+
+
+        // 白背景
+        outputCtx.fillStyle =
+            "#ffffff";
+
+        outputCtx.fillRect(
+            0,
+            0,
+            outputCanvas.width,
+            outputCanvas.height
+        );
+
+
+        // 署名
+        outputCtx.drawImage(
+            canvas,
+            0,
+            0
+        );
+
+
+        return outputCanvas.toDataURL(
+            "image/png"
+        );
+
+    }
+
+
+    // =========================================================
+    // Base64 → Blob
+    //
+    // 次のkintone連携で使用する。
+    // =========================================================
+
+    function dataUrlToBlob(
+        dataUrl
+    ) {
+
+        const parts =
+            dataUrl.split(",");
+
+
+        const mime =
+            parts[0]
+                .match(
+                    /:(.*?);/
+                )[1];
+
+
+        const binary =
+            atob(
+                parts[1]
+            );
+
+
+        const array =
+            new Uint8Array(
+                binary.length
+            );
+
+
+        for (
+            let i = 0;
+            i < binary.length;
+            i++
+        ) {
+
+            array[i] =
+                binary.charCodeAt(i);
+
+        }
+
+
+        return new Blob(
+            [array],
+            {
+                type: mime
+            }
+        );
+
+    }
+
+
+    // =========================================================
+    // 署名確定
+    // =========================================================
+
+    async function submitSignature() {
+
+        if (!hasSignature) {
+
+            showMessage(
+                "署名してください。",
+                "error"
+            );
+
+            return;
+
+        }
+
+
+        submitButton.disabled =
+            true;
+
+
+        clearMessage();
+
+
+        try {
+
+            const pngData =
+                createSignaturePng();
+
+
+            /*
+             * PNG Blob生成
+             *
+             * 次の段階では、このsignatureBlobを
+             * 中継APIへ送信する。
+             */
+
+            const signatureBlob =
+                dataUrlToBlob(
+                    pngData
+                );
+
+
+            console.log(
+                "Record ID:",
+                recordId
+            );
+
+
+            console.log(
+                "Signature PNG:",
+                signatureBlob
+            );
+
+
+            console.log(
+                "PNG Size:",
+                signatureBlob.size,
+                "bytes"
+            );
+
+
+            // プレビュー
+
+            previewImage.src =
+                pngData;
+
+
+            previewContainer.style.display =
+                "block";
+
+
+            showMessage(
+                "署名画像を作成しました。",
+                "success"
+            );
+
+
+            /*
+             * =================================================
+             *
+             * 次の段階でここに中継APIへの送信処理を追加する。
+             *
+             * 送信する情報：
+             *
+             * recordId
+             * signatureBlob
+             *
+             * ↓
+             *
+             * 中継API
+             *
+             * ↓
+             *
+             * kintone
+             *
+             * ↓
+             *
+             * 添付ファイルフィールド
+             *
+             * フィールドコード：
+             *
+             * 電子署名
+             *
+             * =================================================
+             */
+
+
+            submitButton.disabled =
+                false;
+
+        }
+        catch (error) {
+
+            console.error(
+                error
+            );
+
+
+            showMessage(
+                "署名画像の作成に失敗しました。",
+                "error"
+            );
+
+
+            submitButton.disabled =
+                false;
+
+        }
+
+    }
+
+
+    // =========================================================
+    // Pointer Event
+    //
+    // iPad：
+    // Apple Pencil
+    // 指
+    //
+    // PC：
+    // マウス
+    //
+    // を共通処理する。
+    // =========================================================
+
+    canvas.addEventListener(
+        "pointerdown",
+        startDrawing
+    );
+
+
+    canvas.addEventListener(
+        "pointermove",
+        draw
+    );
+
+
+    canvas.addEventListener(
+        "pointerup",
+        stopDrawing
+    );
+
+
+    canvas.addEventListener(
+        "pointercancel",
+        stopDrawing
+    );
+
+
+    canvas.addEventListener(
+        "pointerleave",
+        stopDrawing
+    );
+
+
+    // =========================================================
+    // ボタン
+    // =========================================================
+
+    clearButton.addEventListener(
+        "click",
+        clearCanvas
+    );
+
+
+    submitButton.addEventListener(
+        "click",
+        submitSignature
+    );
+
+
+    // =========================================================
+    // 画面回転対応
+    // =========================================================
+
+    window.addEventListener(
+        "orientationchange",
+        () => {
+
+            /*
+             * iPadの縦横変更でCanvasサイズも変わるため
+             * 現段階では署名をクリアする。
+             */
+
+            setTimeout(
+                () => {
+
+                    resizeCanvas();
+
+                    clearCanvas();
+
+                },
+                300
+            );
+
+        }
+    );
+
+
+})();
+
+</script>
+
+</body>
+</html>
