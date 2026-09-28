@@ -322,9 +322,6 @@
 
     // =========================================================
     // Power Automate
-    //
-    // 「HTTP 要求の受信時」に表示されている
-    // HTTP POST の URL をここに設定
     // =========================================================
 
     const POWER_AUTOMATE_URL =
@@ -362,8 +359,6 @@
 
     // =========================================================
     // URLパラメータ
-    //
-    // ?record=123
     // =========================================================
 
     const params =
@@ -381,7 +376,7 @@
             "block";
 
         recordInfo.textContent =
-            `対象レコード：${recordId}`;
+            `電子署名保存レコード番号：${recordId}`;
     }
 
 
@@ -611,12 +606,32 @@
         }
 
 
+        // 描画中状態も解除
+        drawing =
+            false;
+
+
+        // Retina用の拡大変換を一時的に解除して、
+        // Canvasの実ピクセル領域を完全に消去
+        ctx.save();
+
+        ctx.setTransform(
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+        );
+
         ctx.clearRect(
             0,
             0,
             canvas.width,
             canvas.height
         );
+
+        ctx.restore();
 
 
         hasSignature =
@@ -722,12 +737,6 @@
 
     // =========================================================
     // Data URLからBase64本体だけを取得
-    //
-    // data:image/png;base64,xxxxx
-    //
-    // ↓
-    //
-    // xxxxx
     // =========================================================
 
     function getBase64FromDataUrl(
@@ -892,13 +901,9 @@
 
         try {
 
-            // PNG生成
-
             const pngData =
                 createSignaturePng();
 
-
-            // プレビュー
 
             previewImage.src =
                 pngData;
@@ -907,14 +912,10 @@
                 "block";
 
 
-            // Power Automateへ送信
-
             await sendToPowerAutomate(
                 pngData
             );
 
-
-            // 成功
 
             showMessage(
                 "署名を保存しました。",
@@ -963,13 +964,6 @@
 
     // =========================================================
     // Pointer Event
-    //
-    // iPad：
-    // Apple Pencil
-    // 指
-    //
-    // PC：
-    // マウス
     // =========================================================
 
     canvas.addEventListener(
