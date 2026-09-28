@@ -237,7 +237,6 @@
                 min-height: 58px;
                 font-size: 18px;
             }
-
         }
 
     </style>
@@ -322,6 +321,17 @@
 
 
     // =========================================================
+    // Power Automate
+    //
+    // 「HTTP 要求の受信時」に表示されている
+    // HTTP POST の URL をここに設定
+    // =========================================================
+
+    const POWER_AUTOMATE_URL =
+        "https://default1a2cf14ad33440fe9e6c8e9728b84d.0d.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/00/workflows/8b8163f7a0de444bb384dcb33fc100c5/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=WtXGZnwbImNnvU2Kc56KGZjtkj6r1AubemQGQOhKMEc";
+
+
+    // =========================================================
     // DOM
     // =========================================================
 
@@ -372,7 +382,6 @@
 
         recordInfo.textContent =
             `対象レコード：${recordId}`;
-
     }
 
 
@@ -384,6 +393,9 @@
         false;
 
     let hasSignature =
+        false;
+
+    let isSubmitting =
         false;
 
     let lastX =
@@ -439,7 +451,6 @@
 
         ctx.lineWidth =
             3;
-
     }
 
 
@@ -455,7 +466,6 @@
         const rect =
             canvas.getBoundingClientRect();
 
-
         return {
 
             x:
@@ -465,9 +475,7 @@
             y:
                 event.clientY -
                 rect.top
-
         };
-
     }
 
 
@@ -477,16 +485,17 @@
 
     function startDrawing(event) {
 
-        event.preventDefault();
+        if (isSubmitting) {
+            return;
+        }
 
+        event.preventDefault();
 
         drawing =
             true;
 
-
         const position =
             getPosition(event);
-
 
         lastX =
             position.x;
@@ -503,9 +512,7 @@
             canvas.setPointerCapture(
                 event.pointerId
             );
-
         }
-
     }
 
 
@@ -519,9 +526,7 @@
             return;
         }
 
-
         event.preventDefault();
-
 
         const position =
             getPosition(event);
@@ -552,13 +557,10 @@
         hasSignature =
             true;
 
-
         submitButton.disabled =
             false;
 
-
         clearMessage();
-
     }
 
 
@@ -572,9 +574,7 @@
             return;
         }
 
-
         event.preventDefault();
-
 
         drawing =
             false;
@@ -595,11 +595,8 @@
             catch (error) {
 
                 // 何もしない
-
             }
-
         }
-
     }
 
 
@@ -608,6 +605,11 @@
     // =========================================================
 
     function clearCanvas() {
+
+        if (isSubmitting) {
+            return;
+        }
+
 
         ctx.clearRect(
             0,
@@ -635,7 +637,6 @@
 
 
         clearMessage();
-
     }
 
 
@@ -653,7 +654,6 @@
 
         message.className =
             `message ${type}`;
-
     }
 
 
@@ -664,7 +664,6 @@
 
         message.className =
             "message";
-
     }
 
 
@@ -678,6 +677,7 @@
             document.createElement(
                 "canvas"
             );
+
 
         outputCanvas.width =
             canvas.width;
@@ -693,6 +693,7 @@
 
 
         // 白背景
+
         outputCtx.fillStyle =
             "#ffffff";
 
@@ -705,6 +706,7 @@
 
 
         // 署名
+
         outputCtx.drawImage(
             canvas,
             0,
@@ -715,60 +717,108 @@
         return outputCanvas.toDataURL(
             "image/png"
         );
-
     }
 
 
     // =========================================================
-    // Base64 → Blob
+    // Data URLからBase64本体だけを取得
+    //
+    // data:image/png;base64,xxxxx
+    //
+    // ↓
+    //
+    // xxxxx
     // =========================================================
 
-    function dataUrlToBlob(
+    function getBase64FromDataUrl(
         dataUrl
     ) {
 
-        const parts =
-            dataUrl.split(",");
+        const commaIndex =
+            dataUrl.indexOf(",");
 
 
-        const mime =
-            parts[0]
-                .match(
-                    /:(.*?);/
-                )[1];
+        if (commaIndex === -1) {
 
-
-        const binary =
-            atob(
-                parts[1]
+            throw new Error(
+                "PNGデータの形式が不正です。"
             );
-
-
-        const array =
-            new Uint8Array(
-                binary.length
-            );
-
-
-        for (
-            let i = 0;
-            i < binary.length;
-            i++
-        ) {
-
-            array[i] =
-                binary.charCodeAt(i);
-
         }
 
 
-        return new Blob(
-            [array],
-            {
-                type: mime
-            }
+        return dataUrl.substring(
+            commaIndex + 1
         );
+    }
 
+
+    // =========================================================
+    // Power Automateへ署名送信
+    // =========================================================
+
+    async function sendToPowerAutomate(
+        pngData
+    ) {
+
+        const imageBase64 =
+            getBase64FromDataUrl(
+                pngData
+            );
+
+
+        const requestBody = {
+
+            recordId:
+                String(recordId),
+
+            fileName:
+                "signature.png",
+
+            imageBase64:
+                imageBase64
+        };
+
+
+        const response =
+            await fetch(
+                POWER_AUTOMATE_URL,
+                {
+                    method:
+                        "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify(
+                            requestBody
+                        )
+                }
+            );
+
+
+        if (!response.ok) {
+
+            const responseText =
+                await response.text();
+
+
+            console.error(
+                "Power Automate Error:",
+                response.status,
+                responseText
+            );
+
+
+            throw new Error(
+                `Power Automateへの送信に失敗しました。HTTP ${response.status}`
+            );
+        }
+
+
+        return response;
     }
 
 
@@ -786,55 +836,85 @@
             );
 
             return;
-
         }
 
 
+        if (!recordId) {
+
+            showMessage(
+                "対象レコードが指定されていません。",
+                "error"
+            );
+
+            return;
+        }
+
+
+        if (
+            !POWER_AUTOMATE_URL ||
+            POWER_AUTOMATE_URL ===
+                "ここにPower AutomateのHTTP POSTのURL"
+        ) {
+
+            showMessage(
+                "Power Automateの送信先が設定されていません。",
+                "error"
+            );
+
+            return;
+        }
+
+
+        if (isSubmitting) {
+            return;
+        }
+
+
+        isSubmitting =
+            true;
+
+
         submitButton.disabled =
+            true;
+
+        clearButton.disabled =
             true;
 
 
         clearMessage();
 
 
+        showMessage(
+            "署名を保存しています...",
+            "success"
+        );
+
+
         try {
+
+            // PNG生成
 
             const pngData =
                 createSignaturePng();
 
 
-            const signatureBlob =
-                dataUrlToBlob(
-                    pngData
-                );
-
-
-            console.log(
-                "Record ID:",
-                recordId
-            );
-
-
-            console.log(
-                "Signature PNG:",
-                signatureBlob
-            );
-
-
-            console.log(
-                "PNG Size:",
-                signatureBlob.size,
-                "bytes"
-            );
-
+            // プレビュー
 
             previewImage.src =
                 pngData;
 
-
             previewContainer.style.display =
                 "block";
 
+
+            // Power Automateへ送信
+
+            await sendToPowerAutomate(
+                pngData
+            );
+
+
+            // 成功
 
             showMessage(
                 "署名を保存しました。",
@@ -842,38 +922,20 @@
             );
 
 
-            /*
-             * =================================================
-             *
-             * 次のステップで中継APIへの送信処理を追加
-             *
-             * recordId
-             * signatureBlob
-             *
-             * ↓
-             *
-             * 中継API
-             *
-             * ↓
-             *
-             * kintone
-             *
-             * ↓
-             *
-             * 添付ファイルフィールド
-             * フィールドコード：電子署名
-             *
-             * =================================================
-             */
+            console.log(
+                "署名保存完了"
+            );
 
-
-            submitButton.disabled =
-                false;
+            console.log(
+                "Record ID:",
+                recordId
+            );
 
         }
         catch (error) {
 
             console.error(
+                "署名保存エラー:",
                 error
             );
 
@@ -888,7 +950,14 @@
                 false;
 
         }
+        finally {
 
+            isSubmitting =
+                false;
+
+            clearButton.disabled =
+                false;
+        }
     }
 
 
@@ -963,14 +1032,11 @@
                     resizeCanvas();
 
                     clearCanvas();
-
                 },
                 300
             );
-
         }
     );
-
 
 })();
 
