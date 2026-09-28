@@ -93,28 +93,6 @@
             cursor: crosshair;
         }
 
-        .signature-line {
-            position: absolute;
-            left: 8%;
-            right: 8%;
-            bottom: 70px;
-
-            border-bottom: 1px solid #aaa;
-
-            pointer-events: none;
-        }
-
-        .signature-label {
-            position: absolute;
-            left: 8%;
-            bottom: 35px;
-
-            color: #999;
-            font-size: 14px;
-
-            pointer-events: none;
-        }
-
         .buttons {
             display: flex;
             gap: 16px;
@@ -287,12 +265,6 @@
 
             <canvas id="signatureCanvas"></canvas>
 
-            <div class="signature-line"></div>
-
-            <div class="signature-label">
-                ご署名
-            </div>
-
         </div>
 
         <div class="buttons">
@@ -311,7 +283,7 @@
                 type="button"
                 disabled
             >
-                署名を確定する
+                確定する
             </button>
 
         </div>
@@ -381,11 +353,7 @@
     // =========================================================
     // URLパラメータ
     //
-    // 将来的に
-    //
     // ?record=123
-    //
-    // のようにkintoneからレコードIDを渡す。
     // =========================================================
 
     const params =
@@ -626,7 +594,7 @@
             }
             catch (error) {
 
-                // Pointer Captureされていない場合は何もしない
+                // 何もしない
 
             }
 
@@ -706,11 +674,6 @@
 
     function createSignaturePng() {
 
-        /*
-         * 帳票に出したとき背景が透明にならないよう、
-         * 白背景付きPNGとして出力する。
-         */
-
         const outputCanvas =
             document.createElement(
                 "canvas"
@@ -758,8 +721,6 @@
 
     // =========================================================
     // Base64 → Blob
-    //
-    // 次のkintone連携で使用する。
     // =========================================================
 
     function dataUrlToBlob(
@@ -842,13 +803,6 @@
                 createSignaturePng();
 
 
-            /*
-             * PNG Blob生成
-             *
-             * 次の段階では、このsignatureBlobを
-             * 中継APIへ送信する。
-             */
-
             const signatureBlob =
                 dataUrlToBlob(
                     pngData
@@ -874,8 +828,6 @@
             );
 
 
-            // プレビュー
-
             previewImage.src =
                 pngData;
 
@@ -893,9 +845,7 @@
             /*
              * =================================================
              *
-             * 次の段階でここに中継APIへの送信処理を追加する。
-             *
-             * 送信する情報：
+             * 次のステップで中継APIへの送信処理を追加
              *
              * recordId
              * signatureBlob
@@ -911,10 +861,7 @@
              * ↓
              *
              * 添付ファイルフィールド
-             *
-             * フィールドコード：
-             *
-             * 電子署名
+             * フィールドコード：電子署名
              *
              * =================================================
              */
@@ -954,8 +901,6 @@
     //
     // PC：
     // マウス
-    //
-    // を共通処理する。
     // =========================================================
 
     canvas.addEventListener(
@@ -1011,11 +956,6 @@
     window.addEventListener(
         "orientationchange",
         () => {
-
-            /*
-             * iPadの縦横変更でCanvasサイズも変わるため
-             * 現段階では署名をクリアする。
-             */
 
             setTimeout(
                 () => {
