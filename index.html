@@ -401,6 +401,38 @@
 
 
     // =========================================================
+    // Canvas描画設定
+    // =========================================================
+
+    function setupDrawingContext() {
+
+        const ratio =
+            window.devicePixelRatio || 1;
+
+        ctx.setTransform(
+            ratio,
+            0,
+            0,
+            ratio,
+            0,
+            0
+        );
+
+        ctx.lineCap =
+            "round";
+
+        ctx.lineJoin =
+            "round";
+
+        ctx.strokeStyle =
+            "#111";
+
+        ctx.lineWidth =
+            3;
+    }
+
+
+    // =========================================================
     // Canvasサイズ調整
     // Retina / iPad対応
     // =========================================================
@@ -425,27 +457,7 @@
             );
 
 
-        ctx.setTransform(
-            ratio,
-            0,
-            0,
-            ratio,
-            0,
-            0
-        );
-
-
-        ctx.lineCap =
-            "round";
-
-        ctx.lineJoin =
-            "round";
-
-        ctx.strokeStyle =
-            "#111";
-
-        ctx.lineWidth =
-            3;
+        setupDrawingContext();
     }
 
 
@@ -596,7 +608,7 @@
 
 
     // =========================================================
-    // Canvasクリア
+    // Canvas完全クリア
     // =========================================================
 
     function clearCanvas() {
@@ -606,42 +618,49 @@
         }
 
 
-        // 描画中状態も解除
+        // 描画状態を停止
         drawing =
             false;
 
+        lastX =
+            0;
 
-        // Retina用の拡大変換を一時的に解除して、
-        // Canvasの実ピクセル領域を完全に消去
-        ctx.save();
-
-        ctx.setTransform(
-            1,
-            0,
-            0,
-            1,
-            0,
-            0
-        );
-
-        ctx.clearRect(
-            0,
-            0,
-            canvas.width,
-            canvas.height
-        );
-
-        ctx.restore();
+        lastY =
+            0;
 
 
+        // 現在のCanvas実サイズを保存
+        const currentWidth =
+            canvas.width;
+
+        const currentHeight =
+            canvas.height;
+
+
+        // Canvasのwidth/heightを再設定すると
+        // 描画バッファそのものが完全に初期化される
+        canvas.width =
+            currentWidth;
+
+        canvas.height =
+            currentHeight;
+
+
+        // Canvas初期化によって描画設定も消えるため再設定
+        setupDrawingContext();
+
+
+        // 署名状態を初期化
         hasSignature =
             false;
 
 
+        // 確定ボタン無効化
         submitButton.disabled =
             true;
 
 
+        // プレビュー削除
         previewImage.removeAttribute(
             "src"
         );
@@ -708,7 +727,6 @@
 
 
         // 白背景
-
         outputCtx.fillStyle =
             "#ffffff";
 
@@ -721,7 +739,6 @@
 
 
         // 署名
-
         outputCtx.drawImage(
             canvas,
             0,
@@ -901,10 +918,12 @@
 
         try {
 
+            // PNG生成
             const pngData =
                 createSignaturePng();
 
 
+            // プレビュー
             previewImage.src =
                 pngData;
 
@@ -912,11 +931,13 @@
                 "block";
 
 
+            // Power Automateへ送信
             await sendToPowerAutomate(
                 pngData
             );
 
 
+            // 成功
             showMessage(
                 "署名を保存しました。",
                 "success"
